@@ -6,8 +6,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
 
     // Hardcoded credentials 
-    $validUser = 'admin';
-    $validPass = '1234';
+    $validUser = getenv('ADMIN_USER') ?: 'admin';
+    $validPass = getenv('ADMIN_PASS') ?: '1234';
+
 
     if ($username === $validUser && $password === $validPass) {
         $_SESSION['isLoggedIn'] = true;

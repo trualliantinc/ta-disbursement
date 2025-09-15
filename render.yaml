@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: ta-disbursement
+    env: docker
+    plan: starter
+    autoDeploy: true
+    # If your code is in a subfolder, set rootDirectory. We keep it default (repo root).
+    # rootDirectory: .
+    envVars:
+      - key: ADMIN_USER
+        sync: false
+      - key: ADMIN_PASS
+        sync: false
+      - key: SHEETS_SPREADSHEET_ID
+        sync: false
+      - key: GOOGLE_CREDENTIALS_JSON
+        sync: false
+    healthCheckPath: /login.php
+    # Optionally increase health check timeout for cold starts
+    healthCheckTimeout: 120

@@ -20,7 +20,8 @@ $client->addScope(Sheets::SPREADSHEETS);
 $service = new Sheets($client);
 
 // ✅ your real spreadsheet ID
-$spreadsheetId = '1DgWfyS0eF72Imdg9lh6wzYeeBzx8DslS3RgJweKo0w0';
+$spreadsheetId = getenv('SHEETS_SPREADSHEET_ID') ?: 'PUT-FALLBACK-HERE';
+
 
 // ✅ Ensure sheet for current month exists
 function ensureMonthSheet($service, $spreadsheetId) {
