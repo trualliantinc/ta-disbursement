@@ -1,50 +1,39 @@
-# Dockerfile
+# Use PHP + Apache
 FROM php:8.2-apache
 
-# System deps for PHP extensions
+# Install system deps and Composer
 RUN apt-get update && apt-get install -y \
-    git unzip \
-    libzip-dev \
-    libpng-dev libjpeg62-turbo-dev libfreetype6-dev \
-    libonig-dev \
-    libxml2-dev \
-    libicu-dev \
-    libcurl4-openssl-dev \
- && docker-php-ext-configure gd --with-freetype --with-jpeg \
- && docker-php-ext-install -j$(nproc) \
-    zip \
-    gd \
-    mbstring \
-    intl \
-    curl \
-    pdo \
-    pdo_mysql \
-    xml \
-    dom \
- && a2enmod rewrite headers \
+    git unzip libzip-dev \
+ && docker-php-ext-install zip \
+ && a2enmod rewrite \
  && rm -rf /var/lib/apt/lists/*
 
-# Install Composer
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-ENV COMPOSER_ALLOW_SUPERUSER=1 COMPOSER_MEMORY_LIMIT=-1
+# Enable .htaccess overrides
+RUN printf '<Directory "/var/www/html">\n\tAllowOverride All\n\tRequire all granted\n</Directory>\n' \
+    > /etc/apache2/conf-available/allowoverride.conf \
+ && a2enconf allowoverride
 
-# Workdir
+# Install Composer
+RUN curl -sS https://getcomposer.org/installer | php -- \
+      --install-dir=/usr/local/bin --filename=composer
+
+# Set workdir
 WORKDIR /var/www/html
 
-# Leverage build cache for vendor install
-COPY composer.json composer.lock ./
-RUN composer install -n --prefer-dist --no-dev --no-scripts
+# Leverage Docker layer cache for Composer
+COPY composer.json ./
+# (copy lock if you use it; if not, remove next line)
+# COPY composer.lock ./
+RUN composer install --no-dev --prefer-dist --no-interaction --no-ansi || true
 
-# App code
+# Copy the rest of the app
 COPY . .
 
-# If your project has post-install scripts / autoload dump:
-RUN composer dump-autoload -o || true
+# Provide an entrypoint that adapts Apache to $PORT (Render)
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Apache on 8080
-ENV APACHE_PORT=8080
-RUN sed -ri -e 's!^Listen 80$!Listen ${APACHE_PORT}!g' /etc/apache2/ports.conf \
-    && sed -ri -e 's!VirtualHost \*:80!VirtualHost \*:${APACHE_PORT}!g' /etc/apache2/sites-available/000-default.conf
-
+# Default port (Render injects $PORT at runtime; entrypoint switches Apache to it)
 EXPOSE 8080
-CMD ["apache2-foreground"]
+
+ENTRYPOINT ["docker-entrypoint.sh"]
