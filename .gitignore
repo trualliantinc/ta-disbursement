@@ -1,15 +1,5 @@
-# PHP / Composer
-/vendor/
-/composer.phar
-
-# Node (if ever added)
-/node_modules/
-
-# OS / IDE
-.DS_Store
-*.log
-.vscode/
-
-# Secrets – don't commit!
-credentials.json
-.env
+# Composer
+prject/vendor/
+# Secrets
+prject/credentials.json
+*.env

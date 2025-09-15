@@ -1,41 +1,30 @@
-# --- Base image with Apache + PHP 8.2 ---
-FROM php:8.2-apache
+# ---- Build/Runtime ----
+FROM php:8.2-cli
 
-# System deps (zip is needed by Composer), enable useful apache modules
-RUN apt-get update && apt-get install -y \
-    git unzip libzip-dev \
- && docker-php-ext-install zip \
- && a2enmod rewrite headers expires
-
-# (Optional) If you use PDO/MySQL elsewhere, uncomment:
-# RUN docker-php-ext-install pdo pdo_mysql
+# Install extensions needed by google/apiclient (zip) + composer
+RUN apt-get update && apt-get install -y --no-install-recommends git unzip libzip-dev \
+  && docker-php-ext-install zip \
+  && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Set working dir
-WORKDIR /var/www/html
+# App dir
+WORKDIR /app
 
-# Copy only composer files first (for better Docker layer caching)
-COPY composer.json composer.lock ./
-RUN composer install --no-dev --prefer-dist --no-interaction --no-progress || true
+# Only copy composer files first (better layer caching)
+COPY prject/composer.json prject/composer.lock ./prject/
+RUN cd prject && composer install --no-dev --prefer-dist --no-interaction --no-progress
 
 # Copy the rest of the app
-COPY . .
+COPY prject ./prject
 
-# Apache: allow .htaccess overrides if you use them
-RUN sed -ri 's!/var/www/html!/var/www/html!g' /etc/apache2/sites-available/000-default.conf \
- && printf "<Directory /var/www/html>\n    AllowOverride All\n    Require all granted\n</Directory>\n" > /etc/apache2/conf-available/app-htaccess.conf \
- && a2enconf app-htaccess
+# Entrypoint writes credentials.json (from env) and starts PHP server
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-# Startup script lets Apache listen on $PORT (Render provides it)
-COPY start.sh /usr/local/bin/start.sh
-RUN chmod +x /usr/local/bin/start.sh
-
-# Default port if none provided (Render sets $PORT)
+# Render sets $PORT; default to 10000 locally
 ENV PORT=10000
 
-# Expose for local testing (Render ignores EXPOSE but it's nice for dev)
 EXPOSE 10000
-
-CMD ["bash", "/usr/local/bin/start.sh"]
+CMD ["/entrypoint.sh"]
