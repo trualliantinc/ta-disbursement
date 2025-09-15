@@ -1,12 +1,11 @@
-# PHP / composer
+# PHP / Composer
 /vendor/
 /composer.phar
-composer.lock
 
 # Node (if ever added)
 /node_modules/
 
-# OS/IDE
+# OS / IDE
 .DS_Store
 *.log
 .vscode/
